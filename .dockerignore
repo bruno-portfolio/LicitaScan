@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Test/Coverage
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+
+# Build
+*.egg-info
+dist
+build
+
+# Misc
+.DS_Store
+*.log
+data/
+*.xlsx
+*.csv

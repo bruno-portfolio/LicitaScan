@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  licitascan:
+    build: .
+    container_name: licitascan
+    ports:
+      - "8501:8501"
+    environment:
+      - PNCP_BASE_URL=https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao
+      - API_TIMEOUT=15
+      - DEBUG=false
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

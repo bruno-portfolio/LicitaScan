@@ -1,0 +1,21 @@
+# Core
+streamlit>=1.31.0
+httpx>=0.26.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Data
+pandas>=2.1.0
+openpyxl>=3.1.0
+xlsxwriter>=3.1.0
+
+# Dev/Test
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+ruff>=0.1.0
+mypy>=1.8.0
+
+# Types
+types-requests>=2.31.0
+pandas-stubs>=2.1.0
