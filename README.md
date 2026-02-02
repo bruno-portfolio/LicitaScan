@@ -89,7 +89,7 @@ pytest tests/ -v
 
 ## Licença
 
-MIT
+[MIT](https://github.com/bruno-portfolio/LicitaScan/blob/main/LICENSE) 
 
 ---
 
