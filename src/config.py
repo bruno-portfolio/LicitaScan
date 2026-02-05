@@ -401,7 +401,5 @@ DEFAULT_KEYWORD_PRESETS: dict[str, dict[str, list[str]]] = {
 }
 
 # Lista de áreas disponíveis (ordenada)
-AREAS_DISPONIVEIS: list[str] = sorted(
-    [k for k in DEFAULT_KEYWORD_PRESETS.keys()]
-)
+AREAS_DISPONIVEIS: list[str] = sorted(DEFAULT_KEYWORD_PRESETS)
 

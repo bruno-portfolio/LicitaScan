@@ -7,7 +7,6 @@ from collections import Counter
 from collections.abc import Callable
 
 from src.api.pncp_client import PNCPClient
-from src.config import MODALIDADES
 from src.filters.matcher import KeywordMatcher
 from src.models.schemas import FilterConfig, Licitacao, ScanProgress, ScanResult
 
