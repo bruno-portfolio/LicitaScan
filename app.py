@@ -908,8 +908,13 @@ def main() -> None:
                     type="primary",
                     use_container_width=True,
                 ):
-                    st.session_state.scan_result = None  # Limpar resultado anterior
-                    run_scan(config)
+                    # Limpar resultado anterior e estado parcial
+                    st.session_state.scan_result = None
+                    st.session_state.results_page = 1
+                    if "partial_result" in st.session_state:
+                        del st.session_state.partial_result
+                    st.session_state.is_scanning = True
+                    st.rerun()
 
     if not st.session_state.is_scanning:
         render_results()
