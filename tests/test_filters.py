@@ -27,7 +27,6 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\bgeorreferenciamento\b"],
             keywords_related=[],
-            blacklist=[],
         )
 
         result = matcher.match("Serviço de georreferenciamento de imóveis")
@@ -41,7 +40,6 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\bprad\b"],
             keywords_related=[r"\bpaisagismo\b"],
-            blacklist=[],
         )
 
         result = matcher.match("Projeto de paisagismo urbano")
@@ -54,31 +52,17 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\bprad\b"],
             keywords_related=[r"\bprad\b"],  # Mesmo pattern
-            blacklist=[],
         )
 
         result = matcher.match("Elaboração de PRAD")
 
         assert result.category == KeywordCategory.CORE
 
-    def test_blacklist_blocks_match(self) -> None:
-        """Blacklist bloqueia match."""
-        matcher = KeywordMatcher(
-            keywords_core=[r"\bservico\b"],
-            keywords_related=[],
-            blacklist=[r"\baquisicao de\b"],
-        )
-
-        result = matcher.match("Aquisição de serviço de TI")
-
-        assert result.matched is False
-
     def test_no_match(self) -> None:
         """Sem match retorna False."""
         matcher = KeywordMatcher(
             keywords_core=[r"\bprad\b"],
             keywords_related=[],
-            blacklist=[],
         )
 
         result = matcher.match("Compra de materiais de escritório")
@@ -91,7 +75,6 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\bcar\b"],
             keywords_related=[],
-            blacklist=[],
         )
 
         # Não deve dar match em "carro"
@@ -105,7 +88,6 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\bgeorreferenciamento\b"],
             keywords_related=[],
-            blacklist=[],
         )
 
         resultado = matcher.processar_licitacao(sample_licitacao)
@@ -120,7 +102,6 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\bxyzabc\b"],  # Não vai dar match
             keywords_related=[],
-            blacklist=[],
         )
 
         resultado = matcher.processar_licitacao(sample_licitacao)
@@ -142,11 +123,9 @@ class TestKeywordMatcher:
         matcher = KeywordMatcher(
             keywords_core=[r"\ba\b", r"\bb\b"],
             keywords_related=[r"\bc\b"],
-            blacklist=[r"\bd\b", r"\be\b", r"\bf\b"],
         )
 
         totais = matcher.total_patterns
 
         assert totais["core"] == 2
         assert totais["related"] == 1
-        assert totais["blacklist"] == 3

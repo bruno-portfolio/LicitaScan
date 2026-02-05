@@ -25,18 +25,14 @@ class KeywordMatcher:
         self,
         keywords_core: list[str] | None = None,
         keywords_related: list[str] | None = None,
-        blacklist: list[str] | None = None,
     ) -> None:
         self._core_patterns: list[tuple[Pattern, str]] = []
         self._related_patterns: list[tuple[Pattern, str]] = []
-        self._blacklist_patterns: list[Pattern] = []
 
         if keywords_core:
             self._compile_keywords(keywords_core, KeywordCategory.CORE)
         if keywords_related:
             self._compile_keywords(keywords_related, KeywordCategory.RELATED)
-        if blacklist:
-            self._compile_blacklist(blacklist)
 
     def _compile_keywords(self, patterns: list[str], category: KeywordCategory) -> None:
         """Compila patterns de keywords."""
@@ -51,15 +47,6 @@ class KeywordMatcher:
                 compiled = re.compile(pattern, re.IGNORECASE)
                 label = self._pattern_to_label(pattern)
                 target.append((compiled, label))
-            except re.error:
-                continue
-
-    def _compile_blacklist(self, patterns: list[str]) -> None:
-        """Compila patterns da blacklist."""
-        for pattern in patterns:
-            try:
-                compiled = re.compile(pattern, re.IGNORECASE)
-                self._blacklist_patterns.append(compiled)
             except re.error:
                 continue
 
@@ -78,18 +65,9 @@ class KeywordMatcher:
         normalized = unicodedata.normalize("NFD", texto)
         return normalized.encode("ascii", "ignore").decode("utf-8").lower()
 
-    def is_blacklisted(self, texto: str) -> bool:
-        """Verifica se texto está na blacklist."""
-        texto_norm = self.normalizar_texto(texto)
-        return any(p.search(texto_norm) for p in self._blacklist_patterns)
-
     def match(self, texto: str) -> MatchResult:
         """Tenta match de keywords no texto."""
         texto_norm = self.normalizar_texto(texto)
-
-        # Verifica blacklist primeiro
-        if self.is_blacklisted(texto):
-            return MatchResult(matched=False)
 
         # Tenta core primeiro (prioridade)
         for pattern, label in self._core_patterns:
@@ -142,20 +120,10 @@ class KeywordMatcher:
         except re.error:
             return False
 
-    def adicionar_blacklist(self, pattern: str) -> bool:
-        """Adiciona pattern à blacklist."""
-        try:
-            compiled = re.compile(pattern, re.IGNORECASE)
-            self._blacklist_patterns.append(compiled)
-            return True
-        except re.error:
-            return False
-
     @property
     def total_patterns(self) -> dict[str, int]:
         """Retorna contagem de patterns."""
         return {
             "core": len(self._core_patterns),
             "related": len(self._related_patterns),
-            "blacklist": len(self._blacklist_patterns),
         }

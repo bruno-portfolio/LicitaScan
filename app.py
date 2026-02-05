@@ -6,7 +6,7 @@ from datetime import datetime
 import streamlit as st
 
 from src.config import (
-    DEFAULT_BLACKLIST,
+    AREAS_DISPONIVEIS,
     DEFAULT_KEYWORD_PRESETS,
     ESTADOS_BRASIL,
     MODALIDADES,
@@ -208,9 +208,11 @@ def init_session_state() -> None:
     defaults = {
         "scan_result": None,
         "is_scanning": False,
+        "stop_requested": False,
         "progress": ScanProgress(),
-        "custom_keywords_core": "",
-        "custom_keywords_related": "",
+        "keywords_core_text": "",
+        "keywords_related_text": "",
+        "area_loaded": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -252,6 +254,15 @@ def render_licitacao_card(lic) -> None:
     valor_fmt = f"R$ {lic.valor_estimado:,.0f}".replace(",", ".")
     data_enc = lic.data_encerramento.strftime("%d/%m/%Y às %H:%M") if lic.data_encerramento else "Não informado"
 
+    # Gerar link - usa link do sistema origem ou fallback para PNCP
+    if lic.link and lic.link.strip():
+        link_url = lic.link
+        link_text = "Acessar edital →"
+    else:
+        # Fallback: link direto para o PNCP
+        link_url = f"https://pncp.gov.br/app/editais/{lic.numero_pncp}"
+        link_text = "Ver no PNCP →"
+
     st.markdown(f"""
         <div class="lic-card {card_class}">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
@@ -271,8 +282,8 @@ def render_licitacao_card(lic) -> None:
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; color: #888; font-size: 0.85rem;">
                 <span>⏰ Encerra: {data_enc}</span>
-                <a href="{lic.link}" target="_blank" style="color: #1e3a5f; text-decoration: none; font-weight: 500;">
-                    Acessar edital →
+                <a href="{link_url}" target="_blank" rel="noopener noreferrer" style="color: #1e3a5f; text-decoration: none; font-weight: 500;">
+                    {link_text}
                 </a>
             </div>
         </div>
@@ -288,35 +299,85 @@ def render_sidebar() -> FilterConfig | None:
         st.markdown("## ⚙️ Configurações")
         st.markdown("---")
 
-        # Preset
-        st.markdown("### 📋 Área de Atuação")
-        preset_selecionado = st.selectbox(
-            "Escolha um preset ou personalize",
-            list(DEFAULT_KEYWORD_PRESETS.keys()),
-            index=0,
+        # Áreas de Atuação (preset para carregar keywords)
+        st.markdown("### 📋 Carregar Preset")
+        st.caption("Selecione uma área para carregar keywords (editáveis)")
+
+        area_selecionada = st.selectbox(
+            "Escolha uma área",
+            options=["(Selecione para carregar)"] + AREAS_DISPONIVEIS,
             label_visibility="collapsed",
         )
 
-        preset = DEFAULT_KEYWORD_PRESETS[preset_selecionado]
+        # Carregar keywords do preset quando selecionado
+        if area_selecionada != "(Selecione para carregar)" and area_selecionada != st.session_state.area_loaded:
+            preset = DEFAULT_KEYWORD_PRESETS[area_selecionada]
+            # Converter para texto legível (uma por linha)
+            st.session_state.keywords_core_text = "\n".join(
+                kw.replace(r"\b", "").replace("\\", "") for kw in preset["core"]
+            )
+            st.session_state.keywords_related_text = "\n".join(
+                kw.replace(r"\b", "").replace("\\", "") for kw in preset["related"]
+            )
+            st.session_state.area_loaded = area_selecionada
+            st.rerun()
+
+        # Keywords editáveis
+        st.markdown("### 🔑 Keywords Core")
+        st.caption("Uma por linha (principais, alta prioridade)")
+        keywords_core_text = st.text_area(
+            "Core",
+            value=st.session_state.keywords_core_text,
+            height=200,
+            placeholder="Digite suas keywords aqui\nUma por linha\nEx: georreferenciamento\nEx: licenciamento ambiental",
+            label_visibility="collapsed",
+            key="input_core",
+        )
+        st.session_state.keywords_core_text = keywords_core_text
+
+        st.markdown("### 🔗 Keywords Relacionadas")
+        st.caption("Uma por linha (secundárias)")
+        keywords_related_text = st.text_area(
+            "Related",
+            value=st.session_state.keywords_related_text,
+            height=120,
+            placeholder="Keywords relacionadas\nUma por linha",
+            label_visibility="collapsed",
+            key="input_related",
+        )
+        st.session_state.keywords_related_text = keywords_related_text
+
+        # Processar keywords
+        keywords_core = [k.strip() for k in keywords_core_text.split("\n") if k.strip()]
+        keywords_related = [k.strip() for k in keywords_related_text.split("\n") if k.strip()]
+
+        if not keywords_core and not keywords_related:
+            st.error("Adicione pelo menos uma keyword")
+            return None
+
+        st.caption(f"✅ {len(keywords_core)} core, {len(keywords_related)} relacionadas")
 
         # Estados
         st.markdown("### 🗺️ Estados")
 
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             if st.button("Sudeste", use_container_width=True, type="secondary"):
                 st.session_state["estados_sel"] = ["SP", "RJ", "MG", "ES"]
         with col2:
             if st.button("Sul", use_container_width=True, type="secondary"):
                 st.session_state["estados_sel"] = ["PR", "SC", "RS"]
+        with col3:
+            if st.button("Todos", use_container_width=True, type="secondary"):
+                st.session_state["estados_sel"] = list(ESTADOS_BRASIL.keys())
 
-        estados_default = st.session_state.get("estados_sel", ["SP", "MG", "PR", "SC", "RS", "GO", "MS"])
+        estados_default = st.session_state.get("estados_sel", ["SP", "MG", "PR", "SC", "RS"])
 
         estados_selecionados = st.multiselect(
             "Selecione os estados",
             options=list(ESTADOS_BRASIL.keys()),
             default=estados_default,
-            format_func=lambda x: f"{x}",
+            format_func=lambda x: f"{x} - {ESTADOS_BRASIL[x]}",
             label_visibility="collapsed",
         )
 
@@ -343,52 +404,14 @@ def render_sidebar() -> FilterConfig | None:
         meses = st.select_slider(
             "Meses",
             options=[1, 2, 3, 4, 5, 6],
-            value=1,
+            value=2,
             format_func=lambda x: f"{x} {'mês' if x == 1 else 'meses'}",
             label_visibility="collapsed",
         )
 
-        # Keywords personalizadas
-        if preset_selecionado == "Personalizado":
-            st.markdown("### 🔑 Keywords Personalizadas")
-
-            st.markdown("**Core (principais):**")
-            keywords_core_text = st.text_area(
-                "Core",
-                value=st.session_state.custom_keywords_core,
-                height=80,
-                placeholder=r"Ex: \bgeorreferenciamento\b",
-                label_visibility="collapsed",
-            )
-            st.session_state.custom_keywords_core = keywords_core_text
-
-            st.markdown("**Relacionadas:**")
-            keywords_related_text = st.text_area(
-                "Related",
-                value=st.session_state.custom_keywords_related,
-                height=80,
-                label_visibility="collapsed",
-            )
-            st.session_state.custom_keywords_related = keywords_related_text
-
-            keywords_core = [k.strip() for k in keywords_core_text.split("\n") if k.strip()]
-            keywords_related = [k.strip() for k in keywords_related_text.split("\n") if k.strip()]
-        else:
-            keywords_core = preset["core"]
-            keywords_related = preset["related"]
-
-            with st.expander(f"📝 Ver keywords ({len(keywords_core) + len(keywords_related)})"):
-                st.caption("**Core:**")
-                for kw in keywords_core[:3]:
-                    clean_kw = kw.replace(r"\b", "").replace("\\", "")
-                    st.code(clean_kw, language=None)
-                if len(keywords_core) > 3:
-                    st.caption(f"_+ {len(keywords_core) - 3} mais..._")
-
-        # Blacklist
-        st.markdown("### 🚫 Filtros")
-        usar_blacklist = st.toggle("Excluir compras e obras", value=True)
-        blacklist = DEFAULT_BLACKLIST if usar_blacklist else []
+        # Filtros adicionais
+        st.markdown("### 🔧 Filtros")
+        apenas_abertas = st.toggle("Apenas licitações abertas", value=True, help="Mostra apenas licitações com prazo ainda não encerrado")
 
         # Resumo
         st.markdown("---")
@@ -410,8 +433,7 @@ def render_sidebar() -> FilterConfig | None:
             meses_historico=meses,
             keywords_core=keywords_core,
             keywords_related=keywords_related,
-            blacklist=blacklist,
-            apenas_abertas=True,
+            apenas_abertas=apenas_abertas,
         )
 
 
@@ -419,42 +441,206 @@ def render_sidebar() -> FilterConfig | None:
 # Main Content
 # =============================================================================
 def run_scan(config: FilterConfig) -> None:
-    """Executa o scan."""
+    """Executa o scan com possibilidade de parar - atualiza a cada página."""
+    import time as time_module
+    from src.api.pncp_client import PNCPClient
+    from src.filters.matcher import KeywordMatcher
+    from src.config import get_settings
+    from collections import Counter
+    import httpx
+
     st.session_state.is_scanning = True
-    st.session_state.scan_result = None
+    st.session_state.stop_requested = False
 
-    # Container para progresso
-    progress_container = st.container()
+    # Inicializar resultado parcial se não existir
+    if "partial_result" not in st.session_state:
+        st.session_state.partial_result = {
+            "licitacoes": [],
+            "total_varrido": 0,
+            "keywords_count": Counter(),
+            "erros": [],
+            "inicio": time_module.time(),
+            "estado_idx": 0,
+            "modalidade_idx": 0,
+            "intervalo_idx": 0,
+            "pagina": 1,
+        }
 
-    with progress_container:
-        st.markdown("### 🔄 Varredura em Andamento")
-        progress_bar = st.progress(0)
-        status_col1, status_col2, status_col3 = st.columns(3)
+    partial = st.session_state.partial_result
 
-        with status_col1:
-            estado_placeholder = st.empty()
-        with status_col2:
-            processados_placeholder = st.empty()
-        with status_col3:
-            encontrados_placeholder = st.empty()
+    # UI de progresso
+    st.markdown("### 🔄 Varredura em Andamento")
 
-    def update_progress(progress: ScanProgress) -> None:
-        progress_bar.progress(int(progress.percentual) / 100)
-        estado_placeholder.metric("Estado", progress.estado_atual or "—")
-        processados_placeholder.metric("Processados", f"{progress.total_processado:,}")
-        encontrados_placeholder.metric("Encontrados", progress.total_matches)
+    # Info atual
+    if partial["estado_idx"] < len(config.estados):
+        uf_atual = config.estados[partial["estado_idx"]]
+        mod_atual = config.modalidades[partial["modalidade_idx"]] if partial["modalidade_idx"] < len(config.modalidades) else "-"
+        st.info(f"🔍 **{uf_atual}** | Modalidade **{mod_atual}** | Página **{partial['pagina']}**")
 
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Processados", f"{partial['total_varrido']:,}")
+    with col2:
+        st.metric("Encontrados", len(partial['licitacoes']))
+    with col3:
+        tempo_decorrido = time_module.time() - partial["inicio"]
+        st.metric("Tempo", f"{tempo_decorrido:.0f}s")
+    with col4:
+        if st.button("⏹️ PARAR", type="primary", use_container_width=True):
+            st.session_state.stop_requested = True
+
+    if st.session_state.stop_requested:
+        # Parou - mostrar resultados parciais
+        tempo_total = time_module.time() - partial["inicio"]
+        licitacoes = partial["licitacoes"]
+        licitacoes.sort(key=lambda x: x.score, reverse=True)
+
+        st.session_state.scan_result = ScanResult(
+            licitacoes=licitacoes,
+            total_varrido=partial["total_varrido"],
+            total_encontrado=len(licitacoes),
+            total_abertas=sum(1 for lic in licitacoes if lic.is_aberta),
+            keywords_contagem=dict(partial["keywords_count"]),
+            tempo_execucao=round(tempo_total, 2),
+            erros=partial["erros"],
+        )
+        st.session_state.is_scanning = False
+        del st.session_state.partial_result
+        st.rerun()
+        return
+
+    # Barra de progresso
+    intervalos = PNCPClient.gerar_intervalos_mensais(config.meses_historico)
+    total_combos = len(config.estados) * len(config.modalidades) * len(intervalos)
+    current_combo = (
+        partial["estado_idx"] * len(config.modalidades) * len(intervalos) +
+        partial["modalidade_idx"] * len(intervalos) +
+        partial["intervalo_idx"]
+    )
+    st.progress(min(current_combo / max(total_combos, 1), 1.0))
+
+    # Verificar se terminou
+    if partial["estado_idx"] >= len(config.estados):
+        tempo_total = time_module.time() - partial["inicio"]
+        licitacoes = partial["licitacoes"]
+        licitacoes.sort(key=lambda x: x.score, reverse=True)
+
+        st.session_state.scan_result = ScanResult(
+            licitacoes=licitacoes,
+            total_varrido=partial["total_varrido"],
+            total_encontrado=len(licitacoes),
+            total_abertas=sum(1 for lic in licitacoes if lic.is_aberta),
+            keywords_contagem=dict(partial["keywords_count"]),
+            tempo_execucao=round(tempo_total, 2),
+            erros=partial["erros"],
+        )
+        st.session_state.is_scanning = False
+        del st.session_state.partial_result
+        st.rerun()
+        return
+
+    # Configuração
+    matcher = KeywordMatcher(
+        keywords_core=config.keywords_core,
+        keywords_related=config.keywords_related,
+    )
+    settings = get_settings()
+
+    # Dados atuais
+    uf = config.estados[partial["estado_idx"]]
+    cod_mod = config.modalidades[partial["modalidade_idx"]]
+    data_ini, data_fim = intervalos[partial["intervalo_idx"]]
+    pagina = partial["pagina"]
+
+    # Buscar UMA página
     try:
-        scanner = Scanner(config, progress_callback=update_progress)
-        result = asyncio.run(scanner.executar())
-        st.session_state.scan_result = result
-        progress_bar.progress(100)
+        with httpx.Client(timeout=settings.api_timeout) as client:
+            params = {
+                "dataInicial": data_ini,
+                "dataFinal": data_fim,
+                "codigoModalidadeContratacao": cod_mod,
+                "uf": uf,
+                "tamanhoPagina": settings.page_size,
+                "pagina": pagina,
+            }
+            response = client.get(settings.pncp_base_url, params=params)
+            response.raise_for_status()
+            resultado = response.json()
+
+            itens = resultado.get("data", [])
+
+            for item in itens:
+                partial["total_varrido"] += 1
+
+                # Parse manual do item
+                unidade = item.get("unidadeOrgao", {})
+                from src.models.schemas import Licitacao
+                licitacao = Licitacao(
+                    numero_pncp=item.get("numeroControlePNCP", ""),
+                    objeto=item.get("objetoCompra", ""),
+                    valor_estimado=item.get("valorTotalEstimado"),
+                    modalidade=item.get("modalidadeNome", ""),
+                    situacao=item.get("situacaoCompraLicitacaoNome", ""),
+                    data_publicacao=item.get("dataPublicacaoPncp"),
+                    data_encerramento=item.get("dataEncerramentoProposta"),
+                    orgao=unidade.get("nomeUnidade", ""),
+                    municipio=unidade.get("municipioNome", ""),
+                    uf=unidade.get("ufSigla", ""),
+                    link=item.get("linkSistemaOrigem", ""),
+                )
+
+                resultado_match = matcher.processar_licitacao(licitacao)
+                if resultado_match is None:
+                    continue
+                if config.apenas_abertas and not resultado_match.is_aberta:
+                    continue
+
+                # Score
+                score = 0
+                if resultado_match.categoria == "core":
+                    score += 30
+                elif resultado_match.categoria == "related":
+                    score += 15
+                if resultado_match.is_aberta:
+                    score += 40
+                if resultado_match.valor_estimado > 100_000:
+                    score += 20
+                elif resultado_match.valor_estimado > 50_000:
+                    score += 10
+                resultado_match.score = score
+
+                partial["licitacoes"].append(resultado_match)
+                partial["keywords_count"][resultado_match.keyword_match] += 1
+
+            # Avançar
+            if len(itens) < settings.page_size:
+                # Acabou essa combinação, vai para próxima
+                partial["pagina"] = 1
+                partial["intervalo_idx"] += 1
+                if partial["intervalo_idx"] >= len(intervalos):
+                    partial["intervalo_idx"] = 0
+                    partial["modalidade_idx"] += 1
+                    if partial["modalidade_idx"] >= len(config.modalidades):
+                        partial["modalidade_idx"] = 0
+                        partial["estado_idx"] += 1
+            else:
+                # Mais páginas
+                partial["pagina"] += 1
 
     except Exception as e:
-        st.error(f"❌ Erro durante a varredura: {str(e)}")
-    finally:
-        st.session_state.is_scanning = False
-        st.rerun()
+        partial["erros"].append(f"{uf}/{cod_mod}/pag{pagina}: {str(e)}")
+        # Pula para próxima combinação em caso de erro
+        partial["pagina"] = 1
+        partial["intervalo_idx"] += 1
+        if partial["intervalo_idx"] >= len(intervalos):
+            partial["intervalo_idx"] = 0
+            partial["modalidade_idx"] += 1
+            if partial["modalidade_idx"] >= len(config.modalidades):
+                partial["modalidade_idx"] = 0
+                partial["estado_idx"] += 1
+
+    # Continuar
+    st.rerun()
 
 
 def render_results() -> None:
@@ -515,15 +701,21 @@ def render_results() -> None:
     # Sucesso - Métricas
     st.markdown("### 📊 Resultados da Varredura")
 
-    col1, col2, col3, col4 = st.columns(4)
+    # Calcular core vs related
+    total_core = sum(1 for l in result.licitacoes if l.categoria == "core")
+    total_related = sum(1 for l in result.licitacoes if l.categoria == "related")
+
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         render_metric_card(f"{result.total_varrido:,}", "Total Analisado", "📄")
     with col2:
-        render_metric_card(f"{result.total_encontrado}", "Licitações Encontradas", "✅")
+        render_metric_card(f"{result.total_encontrado}", "Encontradas", "✅")
     with col3:
-        render_metric_card(f"{result.taxa_match:.1f}%", "Taxa de Match", "🎯")
+        render_metric_card(f"{total_core}", "Core", "🎯")
     with col4:
-        render_metric_card(f"{result.tempo_execucao:.1f}s", "Tempo de Execução", "⏱️")
+        render_metric_card(f"{total_related}", "Relacionadas", "🔗")
+    with col5:
+        render_metric_card(f"{result.tempo_execucao:.1f}s", "Tempo", "⏱️")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -596,14 +788,41 @@ def render_results() -> None:
         if filter_valor_min > 0:
             licitacoes_filtradas = [l for l in licitacoes_filtradas if l.valor_estimado >= filter_valor_min]
 
-        st.caption(f"Mostrando {min(len(licitacoes_filtradas), 30)} de {len(licitacoes_filtradas)} resultados")
+        # Paginação
+        items_per_page = 30
+        total_items = len(licitacoes_filtradas)
+        total_pages = max(1, (total_items + items_per_page - 1) // items_per_page)
 
-        # Cards
-        for lic in licitacoes_filtradas[:30]:
+        if "results_page" not in st.session_state:
+            st.session_state.results_page = 1
+
+        # Garantir página válida
+        if st.session_state.results_page > total_pages:
+            st.session_state.results_page = 1
+
+        current_page = st.session_state.results_page
+        start_idx = (current_page - 1) * items_per_page
+        end_idx = min(start_idx + items_per_page, total_items)
+
+        # Navegação
+        if total_pages > 1:
+            nav_col1, nav_col2, nav_col3 = st.columns([1, 2, 1])
+            with nav_col1:
+                if st.button("⬅️ Anterior", disabled=(current_page <= 1), use_container_width=True):
+                    st.session_state.results_page -= 1
+                    st.rerun()
+            with nav_col2:
+                st.markdown(f"<div style='text-align: center; padding: 8px;'>Página **{current_page}** de **{total_pages}** ({total_items} resultados)</div>", unsafe_allow_html=True)
+            with nav_col3:
+                if st.button("Próximo ➡️", disabled=(current_page >= total_pages), use_container_width=True):
+                    st.session_state.results_page += 1
+                    st.rerun()
+        else:
+            st.caption(f"{total_items} resultados")
+
+        # Cards da página atual
+        for lic in licitacoes_filtradas[start_idx:end_idx]:
             render_licitacao_card(lic)
-
-        if len(licitacoes_filtradas) > 30:
-            st.info("💡 Faça o download para ver todos os resultados.")
 
     with tab2:
         # Estatísticas
@@ -668,18 +887,25 @@ def main() -> None:
 
     config = render_sidebar()
 
-    if config and not st.session_state.is_scanning:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            if st.button(
-                "🚀 Iniciar Varredura",
-                type="primary",
-                use_container_width=True,
-            ):
-                run_scan(config)
+    if config:
+        if st.session_state.is_scanning:
+            # Continuar scan em andamento
+            run_scan(config)
+        else:
+            # Botão para iniciar
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button(
+                    "🚀 Iniciar Varredura",
+                    type="primary",
+                    use_container_width=True,
+                ):
+                    st.session_state.scan_result = None  # Limpar resultado anterior
+                    run_scan(config)
 
-    render_results()
-    render_footer()
+    if not st.session_state.is_scanning:
+        render_results()
+        render_footer()
 
 
 if __name__ == "__main__":

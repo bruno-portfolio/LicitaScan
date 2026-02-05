@@ -61,6 +61,14 @@ class Licitacao(BaseModel):
         except (ValueError, TypeError):
             return 0.0
 
+    @field_validator("link", "objeto", "modalidade", "situacao", "orgao", "municipio", "uf", "numero_pncp", mode="before")
+    @classmethod
+    def parse_string(cls, v: str | None) -> str:
+        """Converte None para string vazia."""
+        if v is None:
+            return ""
+        return str(v)
+
     def verificar_aberta(self) -> bool:
         """Verifica se a licitação ainda está aberta."""
         if not self.data_encerramento:
@@ -88,7 +96,6 @@ class FilterConfig(BaseModel):
     keywords_related: list[str] = Field(
         default_factory=list, description="Regex keywords relacionadas"
     )
-    blacklist: list[str] = Field(default_factory=list, description="Regex para excluir")
     apenas_abertas: bool = Field(
         default=True, description="Filtrar apenas licitações abertas"
     )
