@@ -205,14 +205,30 @@ st.markdown("""
 # =============================================================================
 def init_session_state() -> None:
     """Inicializa session state."""
+    # Keywords padrão (Agronomia e Meio Ambiente - simplificadas)
+    default_core = """georreferenciamento
+licenciamento ambiental
+estudo de impacto
+prad
+plano de manejo
+laudo ambiental
+inventario florestal
+outorga
+meio ambiente"""
+
+    default_related = """paisagismo
+consultoria ambiental
+gestao ambiental
+projeto ambiental"""
+
     defaults = {
         "scan_result": None,
         "is_scanning": False,
         "stop_requested": False,
         "progress": ScanProgress(),
-        "keywords_core_text": "",
-        "keywords_related_text": "",
-        "area_loaded": None,
+        "keywords_core_text": default_core,
+        "keywords_related_text": default_related,
+        "area_loaded": "Agronomia e Meio Ambiente",
     }
     for key, value in defaults.items():
         if key not in st.session_state:
