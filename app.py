@@ -317,24 +317,24 @@ def render_sidebar() -> FilterConfig | None:
 
         # Áreas de Atuação (preset para carregar keywords)
         st.markdown("### 📋 Carregar Preset")
-        st.caption("Selecione uma área para carregar keywords (editáveis)")
+        st.caption("Selecione e clique em Carregar")
 
-        area_selecionada = st.selectbox(
-            "Escolha uma área",
-            options=["(Selecione para carregar)"] + AREAS_DISPONIVEIS,
-            label_visibility="collapsed",
-        )
+        col_preset, col_btn = st.columns([3, 1])
+        with col_preset:
+            area_selecionada = st.selectbox(
+                "Área",
+                options=AREAS_DISPONIVEIS,
+                index=AREAS_DISPONIVEIS.index(st.session_state.area_loaded) if st.session_state.area_loaded in AREAS_DISPONIVEIS else 0,
+                label_visibility="collapsed",
+                key="preset_selector",
+            )
+        with col_btn:
+            carregar = st.button("📥", help="Carregar preset", use_container_width=True)
 
-        # Carregar keywords do preset quando selecionado
-        if area_selecionada != "(Selecione para carregar)" and area_selecionada != st.session_state.area_loaded:
+        if carregar:
             preset = DEFAULT_KEYWORD_PRESETS[area_selecionada]
-            # Converter para texto legível (uma por linha)
-            st.session_state.keywords_core_text = "\n".join(
-                kw.replace(r"\b", "").replace("\\", "") for kw in preset["core"]
-            )
-            st.session_state.keywords_related_text = "\n".join(
-                kw.replace(r"\b", "").replace("\\", "") for kw in preset["related"]
-            )
+            st.session_state.keywords_core_text = "\n".join(preset["core"])
+            st.session_state.keywords_related_text = "\n".join(preset["related"])
             st.session_state.area_loaded = area_selecionada
             st.rerun()
 
