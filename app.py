@@ -317,26 +317,22 @@ def render_sidebar() -> FilterConfig | None:
 
         # Áreas de Atuação (preset para carregar keywords)
         st.markdown("### 📋 Carregar Preset")
-        st.caption("Selecione e clique em Carregar")
 
-        col_preset, col_btn = st.columns([3, 1])
-        with col_preset:
-            area_selecionada = st.selectbox(
-                "Área",
-                options=AREAS_DISPONIVEIS,
-                index=AREAS_DISPONIVEIS.index(st.session_state.area_loaded) if st.session_state.area_loaded in AREAS_DISPONIVEIS else 0,
-                label_visibility="collapsed",
-                key="preset_selector",
-            )
-        with col_btn:
-            carregar = st.button("📥", help="Carregar preset", use_container_width=True)
-
-        if carregar:
-            preset = DEFAULT_KEYWORD_PRESETS[area_selecionada]
+        def carregar_preset():
+            area = st.session_state.preset_selector
+            preset = DEFAULT_KEYWORD_PRESETS[area]
             st.session_state.keywords_core_text = "\n".join(preset["core"])
             st.session_state.keywords_related_text = "\n".join(preset["related"])
-            st.session_state.area_loaded = area_selecionada
-            st.rerun()
+            st.session_state.area_loaded = area
+
+        st.selectbox(
+            "Área",
+            options=AREAS_DISPONIVEIS,
+            index=AREAS_DISPONIVEIS.index(st.session_state.area_loaded) if st.session_state.area_loaded in AREAS_DISPONIVEIS else 0,
+            label_visibility="collapsed",
+            key="preset_selector",
+            on_change=carregar_preset,
+        )
 
         # Keywords editáveis
         st.markdown("### 🔑 Keywords Core")
