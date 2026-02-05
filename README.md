@@ -7,8 +7,10 @@
 
 Scanner de licitações públicas com interface web. Busca oportunidades abertas no **Portal Nacional de Contratações Públicas (PNCP)** com filtros inteligentes por área de atuação.
 
-<img width="1815" height="918" alt="image" src="https://github.com/user-attachments/assets/0ee18174-1e69-4bd1-b40d-e49576b9eadc" />
-<img width="1811" height="937" alt="image" src="https://github.com/user-attachments/assets/86e29173-ef59-46ea-a8bd-8543b8423807" />
+<img width="1849" height="846" alt="image" src="https://github.com/user-attachments/assets/d5362963-56e4-4a26-8869-515b9a1be329" />
+<img width="1485" height="790" alt="image" src="https://github.com/user-attachments/assets/2846c142-4cd6-42f8-847c-a75a5f8a464a" />
+<img width="1463" height="537" alt="image" src="https://github.com/user-attachments/assets/b0967fa3-39b7-4f57-95ad-d969af5e7889" />
+<img width="1342" height="936" alt="image" src="https://github.com/user-attachments/assets/46125336-da40-4d49-bf4c-27ce1bf7cb5b" />
 
 ## Features
 
