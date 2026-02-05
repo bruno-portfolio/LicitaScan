@@ -337,31 +337,27 @@ def render_sidebar() -> FilterConfig | None:
         # Keywords editáveis
         st.markdown("### 🔑 Keywords Core")
         st.caption("Uma por linha (principais, alta prioridade)")
-        keywords_core_text = st.text_area(
+        st.text_area(
             "Core",
-            value=st.session_state.keywords_core_text,
             height=200,
-            placeholder="Digite suas keywords aqui\nUma por linha\nEx: georreferenciamento\nEx: licenciamento ambiental",
+            placeholder="Digite suas keywords aqui\nUma por linha",
             label_visibility="collapsed",
-            key="input_core",
+            key="keywords_core_text",
         )
-        st.session_state.keywords_core_text = keywords_core_text
 
         st.markdown("### 🔗 Keywords Relacionadas")
         st.caption("Uma por linha (secundárias)")
-        keywords_related_text = st.text_area(
+        st.text_area(
             "Related",
-            value=st.session_state.keywords_related_text,
             height=120,
             placeholder="Keywords relacionadas\nUma por linha",
             label_visibility="collapsed",
-            key="input_related",
+            key="keywords_related_text",
         )
-        st.session_state.keywords_related_text = keywords_related_text
 
         # Processar keywords
-        keywords_core = [k.strip() for k in keywords_core_text.split("\n") if k.strip()]
-        keywords_related = [k.strip() for k in keywords_related_text.split("\n") if k.strip()]
+        keywords_core = [k.strip() for k in st.session_state.keywords_core_text.split("\n") if k.strip()]
+        keywords_related = [k.strip() for k in st.session_state.keywords_related_text.split("\n") if k.strip()]
 
         if not keywords_core and not keywords_related:
             st.error("Adicione pelo menos uma keyword")
