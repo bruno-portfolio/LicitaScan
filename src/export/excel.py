@@ -60,6 +60,11 @@ class ExcelExporter:
 
         data = []
         for lic in self.result.licitacoes:
+            # Fallback para link do PNCP se não tiver link original
+            link = lic.link.strip() if lic.link else ""
+            if not link and lic.numero_pncp:
+                link = f"https://pncp.gov.br/app/editais/{lic.numero_pncp}"
+
             row = {
                 "score": lic.score,
                 "categoria": "Core" if lic.categoria == "core" else "Relacionado",
@@ -71,7 +76,7 @@ class ExcelExporter:
                 "orgao": self._limpar_texto(lic.orgao),
                 "modalidade": lic.modalidade,
                 "data_encerramento": lic.data_encerramento,
-                "link": lic.link,
+                "link": link,
                 "numero_pncp": lic.numero_pncp,
             }
             data.append(row)
