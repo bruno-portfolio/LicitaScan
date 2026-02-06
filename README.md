@@ -7,10 +7,11 @@
 
 Scanner de licitações públicas com interface web. Busca oportunidades abertas no **Portal Nacional de Contratações Públicas (PNCP)** com filtros inteligentes por área de atuação.
 
-<img width="1849" height="846" alt="image" src="https://github.com/user-attachments/assets/d5362963-56e4-4a26-8869-515b9a1be329" />
-<img width="1485" height="790" alt="image" src="https://github.com/user-attachments/assets/2846c142-4cd6-42f8-847c-a75a5f8a464a" />
-<img width="1463" height="537" alt="image" src="https://github.com/user-attachments/assets/b0967fa3-39b7-4f57-95ad-d969af5e7889" />
-<img width="1342" height="936" alt="image" src="https://github.com/user-attachments/assets/46125336-da40-4d49-bf4c-27ce1bf7cb5b" />
+Teste aqui: [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://licitascan.streamlit.app/)
+
+<img width="1831" height="841" alt="image" src="https://github.com/user-attachments/assets/8cb0e6f0-44fc-4ba0-8d99-ffd4fbcc30e9" />
+<img width="1857" height="868" alt="image" src="https://github.com/user-attachments/assets/7473f9f4-056b-450a-bf70-bd9784550863" />
+<img width="1494" height="766" alt="image" src="https://github.com/user-attachments/assets/21d484e4-17dd-4235-8715-67927b748043" />
 
 ## Features
 
